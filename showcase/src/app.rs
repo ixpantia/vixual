@@ -325,9 +325,17 @@ fn HomePage() -> impl IntoView {
                         </label>
                         <ul style="list-style: none; padding: 0; margin: 0;">
                             <For
-                                each=move || palette.get().colors.get()
-                                key=|c| c.to_string()
-                                children=move |color| {
+                                each=move || {
+                                    palette
+                                        .get()
+                                        .colors
+                                        .get()
+                                        .into_iter()
+                                        .enumerate()
+                                        .collect::<Vec<_>>()
+                                }
+                                key=|item| item.0
+                                children=move |(idx, color)| {
                                     let c_str = color.to_string();
                                     view! {
                                         <li style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 5px; padding: 5px; background: white; border: 1px solid #eee; border-radius: 4px;">
@@ -347,7 +355,9 @@ fn HomePage() -> impl IntoView {
                                                         .get_untracked()
                                                         .colors
                                                         .update(|colors| {
-                                                            colors.retain(|c| c.to_string() != c_str);
+                                                            if colors.len() > idx {
+                                                                colors.remove(idx);
+                                                            }
                                                         });
                                                 }
                                             >
