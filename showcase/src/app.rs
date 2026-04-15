@@ -332,10 +332,11 @@ fn HomePage() -> impl IntoView {
                                         .get()
                                         .into_iter()
                                         .enumerate()
+                                        .map(|(idx, c)| (idx, c, c.to_string()))
                                         .collect::<Vec<_>>()
                                 }
-                                key=|item| item.0
-                                children=move |(idx, color)| {
+                                key=|item| (item.0, item.2.clone())
+                                children=move |(idx, color, _)| {
                                     let c_str = color.to_string();
                                     view! {
                                         <li style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 5px; padding: 5px; background: white; border: 1px solid #eee; border-radius: 4px;">
