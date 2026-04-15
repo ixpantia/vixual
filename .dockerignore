@@ -1,0 +1,8 @@
+target/
+node_modules/
+.git/
+.vscode/
+.env
+showcase/end2end/
+README.md
+LICENSE

@@ -6,14 +6,17 @@ members = ["showcase", "vixual"]
 leptos = { version = "0.8" }
 leptos_router = { version = "0.8" }
 axum = { version = "0.8" }
+tower-http = { version = "0.6", features = ["set-header", "compression-full"] }
 console_error_panic_hook = { version = "0.1" }
 leptos_axum = { version = "0.8" }
 leptos_meta = { version = "0.8" }
 tokio = { version = "1", features = ["rt-multi-thread"] }
 wasm-bindgen = { version = "=0.2.108" }
+leptos-use = { version = "0.18", default-features = false }
 
 # need to be applied only to wasm build
-[profile.release]
+[profile.wasm-release]
+inherits = "release"
 codegen-units = 1
 lto = true
 opt-level = 'z'
@@ -65,7 +68,6 @@ env = "DEV"
 bin-features = ["ssr"]
 
 
-
 # If the --no-default-features flag should be used when compiling the bin target
 #
 # Optional. Defaults to false.
@@ -85,3 +87,5 @@ lib-default-features = false
 #
 # Optional. Defaults to "release".
 lib-profile-release = "wasm-release"
+
+hash-files = true

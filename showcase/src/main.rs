@@ -1,11 +1,18 @@
+#![recursion_limit = "256"]
+
+use tower_http::compression::CompressionLayer;
+
 #[cfg(feature = "ssr")]
 #[tokio::main]
 async fn main() {
     use axum::Router;
+    use axum::handler::Handler;
+    use axum::http::HeaderValue;
     use leptos::logging::log;
     use leptos::prelude::*;
     use leptos_axum::{LeptosRoutes, generate_route_list};
     use showcase::app::*;
+    use tower_http::set_header::SetResponseHeaderLayer;
 
     let conf = get_configuration(None).unwrap();
     let addr = conf.leptos_options.site_addr;
@@ -18,7 +25,13 @@ async fn main() {
             let leptos_options = leptos_options.clone();
             move || shell(leptos_options.clone())
         })
-        .fallback(leptos_axum::file_and_error_handler(shell))
+        .fallback(leptos_axum::file_and_error_handler(shell).layer(
+            SetResponseHeaderLayer::if_not_present(
+                axum::http::header::CACHE_CONTROL,
+                HeaderValue::from_static("public, max-age=31536000, immutable"),
+            ),
+        ))
+        .layer(CompressionLayer::new())
         .with_state(leptos_options);
 
     // run our app with hyper
