@@ -109,6 +109,8 @@ where
     }
 }
 
+pub type FormatterFn<T> = std::sync::Arc<dyn Fn(&T) -> String + Send + Sync>;
+
 #[derive(Clone)]
 pub struct BarPlotConfig<X, Y>
 where
@@ -125,6 +127,10 @@ where
     pub margin_left: Signal<f64>,
     pub margin_right: Signal<f64>,
     pub bar_relative_width: Signal<f64>,
+    pub x_formatter: FormatterFn<X>,
+    pub y_formatter: FormatterFn<Y>,
+    pub x_tick_formatter: FormatterFn<X>,
+    pub y_tick_formatter: FormatterFn<f64>,
 }
 
 impl<X, Y> BarPlotConfig<X, Y>
@@ -180,6 +186,38 @@ where
         self.bar_relative_width = bar_relative_width.into();
         self
     }
+
+    pub fn with_x_formatter(
+        mut self,
+        formatter: impl Fn(&X) -> String + Send + Sync + 'static,
+    ) -> Self {
+        self.x_formatter = std::sync::Arc::new(formatter);
+        self
+    }
+
+    pub fn with_y_formatter(
+        mut self,
+        formatter: impl Fn(&Y) -> String + Send + Sync + 'static,
+    ) -> Self {
+        self.y_formatter = std::sync::Arc::new(formatter);
+        self
+    }
+
+    pub fn with_x_tick_formatter(
+        mut self,
+        formatter: impl Fn(&X) -> String + Send + Sync + 'static,
+    ) -> Self {
+        self.x_tick_formatter = std::sync::Arc::new(formatter);
+        self
+    }
+
+    pub fn with_y_tick_formatter(
+        mut self,
+        formatter: impl Fn(&f64) -> String + Send + Sync + 'static,
+    ) -> Self {
+        self.y_tick_formatter = std::sync::Arc::new(formatter);
+        self
+    }
 }
 pub struct BarPlotConfigBuilder<X, Y>
 where
@@ -196,6 +234,20 @@ where
     margin_left: Option<Signal<f64>>,
     margin_right: Option<Signal<f64>>,
     bar_relative_width: Option<Signal<f64>>,
+    x_formatter: Option<FormatterFn<X>>,
+    y_formatter: Option<FormatterFn<Y>>,
+    x_tick_formatter: Option<FormatterFn<X>>,
+    y_tick_formatter: Option<FormatterFn<f64>>,
+}
+
+impl<X, Y> Default for BarPlotConfigBuilder<X, Y>
+where
+    X: Plotable,
+    Y: Plotable,
+{
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl<X, Y> BarPlotConfigBuilder<X, Y>
@@ -215,6 +267,10 @@ where
             margin_left: None,
             margin_right: None,
             bar_relative_width: None,
+            x_formatter: None,
+            y_formatter: None,
+            x_tick_formatter: None,
+            y_tick_formatter: None,
         }
     }
 
@@ -268,6 +324,32 @@ where
         self
     }
 
+    pub fn x_formatter(mut self, formatter: impl Fn(&X) -> String + Send + Sync + 'static) -> Self {
+        self.x_formatter = Some(std::sync::Arc::new(formatter));
+        self
+    }
+
+    pub fn y_formatter(mut self, formatter: impl Fn(&Y) -> String + Send + Sync + 'static) -> Self {
+        self.y_formatter = Some(std::sync::Arc::new(formatter));
+        self
+    }
+
+    pub fn x_tick_formatter(
+        mut self,
+        formatter: impl Fn(&X) -> String + Send + Sync + 'static,
+    ) -> Self {
+        self.x_tick_formatter = Some(std::sync::Arc::new(formatter));
+        self
+    }
+
+    pub fn y_tick_formatter(
+        mut self,
+        formatter: impl Fn(&f64) -> String + Send + Sync + 'static,
+    ) -> Self {
+        self.y_tick_formatter = Some(std::sync::Arc::new(formatter));
+        self
+    }
+
     pub fn build(self) -> BarPlotConfig<X, Y> {
         let palette = self
             .palette
@@ -293,6 +375,22 @@ where
             .bar_relative_width
             .unwrap_or_else(|| Signal::stored(0.5));
 
+        let x_formatter = self
+            .x_formatter
+            .unwrap_or_else(|| std::sync::Arc::new(|x: &X| x.to_string()));
+
+        let y_formatter = self
+            .y_formatter
+            .unwrap_or_else(|| std::sync::Arc::new(|y: &Y| y.to_string()));
+
+        let x_tick_formatter = self
+            .x_tick_formatter
+            .unwrap_or_else(|| std::sync::Arc::new(|x: &X| x.to_string()));
+
+        let y_tick_formatter = self
+            .y_tick_formatter
+            .unwrap_or_else(|| std::sync::Arc::new(|y: &f64| format!("{:.1}", y)));
+
         BarPlotConfig {
             palette,
             series,
@@ -304,6 +402,10 @@ where
             margin_left,
             margin_right,
             bar_relative_width,
+            x_formatter,
+            y_formatter,
+            x_tick_formatter,
+            y_tick_formatter,
         }
     }
 }
@@ -395,9 +497,13 @@ where
                 let x_pos = x_center - bar_w / 2.0;
                 let y_pos = height - margin_bottom - bar_height;
 
+                let formatted_x = (conf.x_formatter)(&x_vals[i]);
+                let formatted_y = (conf.y_formatter)(y_val);
+                let formatted_x_tick = (conf.x_tick_formatter)(&x_vals[i]);
+
                 elements.push(view! {
                     <rect x=x_pos y=y_pos width=bar_w height=bar_height fill=color.to_string()>
-                        <title>{format!("{}: {}", x_vals[i].to_string(), val_f64)}</title>
+                        <title>{format!("{}: {}", formatted_x, formatted_y)}</title>
                     </rect>
                     <text
                         x=x_center
@@ -405,7 +511,7 @@ where
                         text-anchor="middle"
                         font-size="12"
                     >
-                        {x_vals[i].to_string()}
+                        {formatted_x_tick}
                     </text>
                 });
                 current_bar += 1;
@@ -444,10 +550,11 @@ where
             };
             let y_pos = height - margin_bottom - (tick_val * scale_y);
 
+            let formatted_tick = (conf.y_tick_formatter)(&tick_val);
             ticks.push(view! {
                 <line x1=margin_left - 5.0 y1=y_pos x2=margin_left y2=y_pos stroke="black" />
                 <text x=margin_left - 10.0 y=y_pos + 5.0 text-anchor="end" font-size="12">
-                    {format!("{:.1}", tick_val)}
+                    {formatted_tick}
                 </text>
             });
         }
