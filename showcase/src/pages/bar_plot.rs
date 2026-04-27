@@ -1,7 +1,8 @@
 use leptos::prelude::*;
 use rand::Rng;
-use vixual::bar_plot::{BarPlot, BarPlotConfig, BarPlotSeries};
+use vixual::bar_plot::{BarPlot, BarPlotConfig};
 use vixual::palette::ColorPalette;
+use vixual::series::Series;
 
 fn generate_random_raw_data() -> (Vec<String>, Vec<f64>) {
     let mut rng = rand::thread_rng();
@@ -43,15 +44,15 @@ fn generate_random_raw_data() -> (Vec<String>, Vec<f64>) {
     (labels, values)
 }
 
-fn generate_random_data() -> BarPlotSeries<String, f64> {
+fn generate_random_data() -> Series<String, f64> {
     let (labels, values) = generate_random_raw_data();
-    BarPlotSeries::new(labels, values)
+    Series::new(labels, values)
 }
 
 #[component]
 pub fn BarPlotPage() -> impl IntoView {
     let series = RwSignal::new(vec![
-        BarPlotSeries::new(
+        Series::new(
             vec![
                 "Apples".to_string(),
                 "Bananas".to_string(),
@@ -59,7 +60,7 @@ pub fn BarPlotPage() -> impl IntoView {
             ],
             vec![15.0, 22.0, 18.0],
         ),
-        BarPlotSeries::new(
+        Series::new(
             vec![
                 "Apples".to_string(),
                 "Bananas".to_string(),

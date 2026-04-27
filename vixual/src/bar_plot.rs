@@ -3,111 +3,8 @@ use leptos::prelude::*;
 use leptos_use::{UseElementSizeReturn, use_element_size};
 
 use crate::palette::ColorPalette;
-
-pub trait Plotable: PartialOrd + Clone + Send + Sync + 'static {
-    fn to_f64(&self) -> f64;
-    fn to_string(&self) -> String;
-}
-
-impl Plotable for f64 {
-    fn to_f64(&self) -> f64 {
-        *self
-    }
-    fn to_string(&self) -> String {
-        ToString::to_string(self)
-    }
-}
-
-impl Plotable for i32 {
-    fn to_f64(&self) -> f64 {
-        *self as f64
-    }
-    fn to_string(&self) -> String {
-        ToString::to_string(self)
-    }
-}
-
-impl Plotable for String {
-    fn to_f64(&self) -> f64 {
-        self.parse().unwrap_or(0.0)
-    }
-    fn to_string(&self) -> String {
-        self.clone()
-    }
-}
-
-impl Plotable for &'static str {
-    fn to_f64(&self) -> f64 {
-        self.parse().unwrap_or(0.0)
-    }
-    fn to_string(&self) -> String {
-        ToString::to_string(self)
-    }
-}
-
-#[derive(Clone)]
-pub struct BarPlotSeriesInner<X, Y> {
-    x: Vec<X>,
-    y: Vec<Y>,
-}
-
-#[derive(Clone, Copy)]
-pub struct BarPlotSeries<X, Y>
-where
-    X: Plotable,
-    Y: Plotable,
-{
-    data: RwSignal<BarPlotSeriesInner<X, Y>>,
-}
-
-impl<X, Y> BarPlotSeries<X, Y>
-where
-    X: Plotable,
-    Y: Plotable,
-{
-    pub fn new(x: Vec<X>, y: Vec<Y>) -> Self {
-        let data = BarPlotSeriesInner { x, y };
-        Self {
-            data: RwSignal::new(data),
-        }
-    }
-    pub fn clear(&self) {
-        self.data.update(|d| {
-            d.x.clear();
-            d.y.clear();
-        });
-    }
-    /// This method updated the underlying signal to the series. Every push
-    /// is an access to a Signal. If you need to call this in a loop
-    /// it is recommended to use `append`
-    pub fn push(&self, x: X, y: Y) {
-        self.data.update(move |d| {
-            d.x.push(x);
-            d.y.push(y);
-        });
-    }
-
-    pub fn append(&self, x: &mut Vec<X>, y: &mut Vec<Y>) {
-        self.data.update(move |d| {
-            d.x.append(x);
-            d.y.append(y);
-        });
-    }
-
-    pub fn replace_data(&self, x: Vec<X>, y: Vec<Y>) {
-        self.data.update(move |d| {
-            d.x = x;
-            d.y = y;
-        });
-    }
-
-    pub fn get_x(&self) -> Vec<X> {
-        self.data.get().x
-    }
-    pub fn get_y(&self) -> Vec<Y> {
-        self.data.get().y
-    }
-}
+use crate::plotable::Plotable;
+use crate::series::Series;
 
 pub type FormatterFn<T> = std::sync::Arc<dyn Fn(&T) -> String + Send + Sync>;
 
@@ -118,7 +15,7 @@ where
     Y: Plotable,
 {
     pub palette: Signal<ColorPalette>,
-    pub series: Signal<Vec<BarPlotSeries<X, Y>>>,
+    pub series: Signal<Vec<Series<X, Y>>>,
     pub title: Signal<String>,
     pub x_label: Signal<String>,
     pub y_label: Signal<String>,
@@ -225,7 +122,7 @@ where
     Y: Plotable,
 {
     palette: Option<Signal<ColorPalette>>,
-    series: Option<Signal<Vec<BarPlotSeries<X, Y>>>>,
+    series: Option<Signal<Vec<Series<X, Y>>>>,
     title: Option<Signal<String>>,
     x_label: Option<Signal<String>>,
     y_label: Option<Signal<String>>,
@@ -279,7 +176,7 @@ where
         self
     }
 
-    pub fn with_series(mut self, series: impl Into<Signal<Vec<BarPlotSeries<X, Y>>>>) -> Self {
+    pub fn with_series(mut self, series: impl Into<Signal<Vec<Series<X, Y>>>>) -> Self {
         self.series = Some(series.into());
         self
     }
@@ -684,8 +581,8 @@ mod tests {
 
     #[test]
     fn test_bar_plot_builder() {
-        let series1 = BarPlotSeries::new(vec!["A".to_string(), "B".to_string()], vec![1.0, 2.0]);
-        let series2 = BarPlotSeries::new(vec!["C".to_string(), "D".to_string()], vec![3.0, 4.0]);
+        let series1 = Series::new(vec!["A".to_string(), "B".to_string()], vec![1.0, 2.0]);
+        let series2 = Series::new(vec!["C".to_string(), "D".to_string()], vec![3.0, 4.0]);
 
         let config = BarPlotConfig::builder()
             .with_series(vec![series1, series2])

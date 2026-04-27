@@ -1,6 +1,8 @@
 use leptos::{either::Either, prelude::*};
 
 pub mod palette;
+pub mod plotable;
+pub mod series;
 
 #[cfg(feature = "bar_plot")]
 pub mod bar_plot;
