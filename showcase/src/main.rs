@@ -1,5 +1,6 @@
 #![recursion_limit = "256"]
 
+#[cfg(feature = "ssr")]
 use tower_http::compression::CompressionLayer;
 
 #[cfg(feature = "ssr")]
