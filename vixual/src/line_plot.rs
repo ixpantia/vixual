@@ -3,13 +3,13 @@ use leptos::prelude::*;
 use leptos_use::{UseElementSizeReturn, use_element_size};
 
 use crate::palette::ColorPalette;
-use crate::plotable::Plotable;
+use crate::plotable::{DataType, Plotable};
 use crate::series::Series;
 
 pub type FormatterFn<T> = std::sync::Arc<dyn Fn(&T) -> String + Send + Sync>;
 
 #[derive(Clone)]
-pub struct BarPlotConfig<X, Y>
+pub struct LinePlotConfig<X, Y>
 where
     X: Plotable,
     Y: Plotable,
@@ -23,20 +23,20 @@ where
     pub margin_bottom: Signal<f64>,
     pub margin_left: Signal<f64>,
     pub margin_right: Signal<f64>,
-    pub bar_relative_width: Signal<f64>,
     pub x_formatter: FormatterFn<X>,
     pub y_formatter: FormatterFn<Y>,
     pub x_tick_formatter: FormatterFn<X>,
+    pub continuous_x_tick_formatter: FormatterFn<f64>,
     pub y_tick_formatter: FormatterFn<f64>,
 }
 
-impl<X, Y> BarPlotConfig<X, Y>
+impl<X, Y> LinePlotConfig<X, Y>
 where
     X: Plotable,
     Y: Plotable,
 {
-    pub fn builder() -> BarPlotConfigBuilder<X, Y> {
-        BarPlotConfigBuilder::new()
+    pub fn builder() -> LinePlotConfigBuilder<X, Y> {
+        LinePlotConfigBuilder::new()
     }
 
     pub fn with_palette(mut self, palette: impl Into<Signal<ColorPalette>>) -> Self {
@@ -79,11 +79,6 @@ where
         self
     }
 
-    pub fn with_bar_relative_width(mut self, bar_relative_width: impl Into<Signal<f64>>) -> Self {
-        self.bar_relative_width = bar_relative_width.into();
-        self
-    }
-
     pub fn with_x_formatter(
         mut self,
         formatter: impl Fn(&X) -> String + Send + Sync + 'static,
@@ -108,6 +103,14 @@ where
         self
     }
 
+    pub fn with_continuous_x_tick_formatter(
+        mut self,
+        formatter: impl Fn(&f64) -> String + Send + Sync + 'static,
+    ) -> Self {
+        self.continuous_x_tick_formatter = std::sync::Arc::new(formatter);
+        self
+    }
+
     pub fn with_y_tick_formatter(
         mut self,
         formatter: impl Fn(&f64) -> String + Send + Sync + 'static,
@@ -116,7 +119,7 @@ where
         self
     }
 }
-pub struct BarPlotConfigBuilder<X, Y>
+pub struct LinePlotConfigBuilder<X, Y>
 where
     X: Plotable,
     Y: Plotable,
@@ -130,14 +133,14 @@ where
     margin_bottom: Option<Signal<f64>>,
     margin_left: Option<Signal<f64>>,
     margin_right: Option<Signal<f64>>,
-    bar_relative_width: Option<Signal<f64>>,
     x_formatter: Option<FormatterFn<X>>,
     y_formatter: Option<FormatterFn<Y>>,
     x_tick_formatter: Option<FormatterFn<X>>,
+    continuous_x_tick_formatter: Option<FormatterFn<f64>>,
     y_tick_formatter: Option<FormatterFn<f64>>,
 }
 
-impl<X, Y> Default for BarPlotConfigBuilder<X, Y>
+impl<X, Y> Default for LinePlotConfigBuilder<X, Y>
 where
     X: Plotable,
     Y: Plotable,
@@ -147,7 +150,7 @@ where
     }
 }
 
-impl<X, Y> BarPlotConfigBuilder<X, Y>
+impl<X, Y> LinePlotConfigBuilder<X, Y>
 where
     X: Plotable,
     Y: Plotable,
@@ -163,10 +166,10 @@ where
             margin_bottom: None,
             margin_left: None,
             margin_right: None,
-            bar_relative_width: None,
             x_formatter: None,
             y_formatter: None,
             x_tick_formatter: None,
+            continuous_x_tick_formatter: None,
             y_tick_formatter: None,
         }
     }
@@ -216,11 +219,6 @@ where
         self
     }
 
-    pub fn bar_relative_width(mut self, bar_relative_width: impl Into<Signal<f64>>) -> Self {
-        self.bar_relative_width = Some(bar_relative_width.into());
-        self
-    }
-
     pub fn x_formatter(mut self, formatter: impl Fn(&X) -> String + Send + Sync + 'static) -> Self {
         self.x_formatter = Some(std::sync::Arc::new(formatter));
         self
@@ -239,6 +237,14 @@ where
         self
     }
 
+    pub fn continuous_x_tick_formatter(
+        mut self,
+        formatter: impl Fn(&f64) -> String + Send + Sync + 'static,
+    ) -> Self {
+        self.continuous_x_tick_formatter = Some(std::sync::Arc::new(formatter));
+        self
+    }
+
     pub fn y_tick_formatter(
         mut self,
         formatter: impl Fn(&f64) -> String + Send + Sync + 'static,
@@ -247,7 +253,7 @@ where
         self
     }
 
-    pub fn build(self) -> BarPlotConfig<X, Y> {
+    pub fn build(self) -> LinePlotConfig<X, Y> {
         let palette = self
             .palette
             .unwrap_or_else(|| Signal::stored(ColorPalette::default()));
@@ -268,9 +274,6 @@ where
         let margin_bottom = self.margin_bottom.unwrap_or_else(|| Signal::stored(40.0));
         let margin_left = self.margin_left.unwrap_or_else(|| Signal::stored(60.0));
         let margin_right = self.margin_right.unwrap_or_else(|| Signal::stored(20.0));
-        let bar_relative_width = self
-            .bar_relative_width
-            .unwrap_or_else(|| Signal::stored(0.5));
 
         let x_formatter = self
             .x_formatter
@@ -284,11 +287,15 @@ where
             .x_tick_formatter
             .unwrap_or_else(|| std::sync::Arc::new(|x: &X| x.to_plot_string()));
 
+        let continuous_x_tick_formatter = self
+            .continuous_x_tick_formatter
+            .unwrap_or_else(|| std::sync::Arc::new(|x: &f64| format!("{:.1}", x)));
+
         let y_tick_formatter = self
             .y_tick_formatter
             .unwrap_or_else(|| std::sync::Arc::new(|y: &f64| format!("{:.1}", y)));
 
-        BarPlotConfig {
+        LinePlotConfig {
             palette,
             series,
             title,
@@ -298,18 +305,18 @@ where
             margin_bottom,
             margin_left,
             margin_right,
-            bar_relative_width,
             x_formatter,
             y_formatter,
             x_tick_formatter,
+            continuous_x_tick_formatter,
             y_tick_formatter,
         }
     }
 }
 
 #[component]
-pub fn BarPlot<X, Y>(
-    config: Signal<BarPlotConfig<X, Y>>,
+pub fn LinePlot<X, Y>(
+    config: Signal<LinePlotConfig<X, Y>>,
     #[prop(optional, into)] width: Option<Signal<String>>,
     #[prop(optional, into)] height: Option<Signal<String>>,
 ) -> impl IntoView
@@ -329,9 +336,6 @@ where
             if let Ok(val) = w_val.parse::<f64>() {
                 return val;
             }
-            // If it's a percentage or something else, we still need a pixel value for SVG internal coords
-            // unless we want to change how it works.
-            // For now, if it's not a direct number, we'll try to use container width.
         }
         container_width.get().max(100.0)
     };
@@ -346,7 +350,7 @@ where
         container_height.get().max(100.0)
     };
 
-    let bars = move || {
+    let lines = move || {
         let width = resolved_width();
         let height = resolved_height();
         let conf = config.get();
@@ -356,15 +360,23 @@ where
         let margin_bottom = conf.margin_bottom.get();
         let margin_left = conf.margin_left.get();
         let margin_right = conf.margin_right.get();
-        let bar_relative_width = conf.bar_relative_width.get();
 
         let mut all_y = Vec::new();
-        let mut total_bars = 0;
+        let mut all_x_f64 = Vec::new();
+        let mut max_x_len = 0;
+
+        let is_continuous = X::data_type() == DataType::Continuous;
 
         for s in &series_vec {
             let y_vals: Vec<Y> = s.get_y();
+            let x_vals: Vec<X> = s.get_x();
             all_y.extend(y_vals.iter().map(|v| v.to_f64()));
-            total_bars += s.get_x().len();
+            if is_continuous {
+                all_x_f64.extend(x_vals.iter().map(|v| v.to_f64()));
+            }
+            if x_vals.len() > max_x_len {
+                max_x_len = x_vals.len();
+            }
         }
 
         let max_y = all_y
@@ -376,43 +388,116 @@ where
             (height - margin_top - margin_bottom) / max_y
         };
 
-        let bar_slot_width = (width - margin_left - margin_right) / (total_bars as f64).max(1.0);
+        let max_x_f64 = if is_continuous {
+            all_x_f64
+                .into_iter()
+                .fold(0.0, |a, b| if a > b { a } else { b })
+        } else {
+            0.0
+        };
 
-        let mut current_bar = 0;
+        let scale_x = if max_x_f64 == 0.0 {
+            1.0
+        } else {
+            (width - margin_left - margin_right) / max_x_f64
+        };
+
+        let x_slot_width = if max_x_len > 1 {
+            (width - margin_left - margin_right) / (max_x_len as f64 - 1.0).max(1.0)
+        } else {
+            0.0
+        };
+
         let mut elements = Vec::new();
+
+        if is_continuous {
+            let num_ticks = 5;
+            for i in 0..=num_ticks {
+                let tick_val = (max_x_f64 / num_ticks as f64) * (i as f64);
+                let x_pos = margin_left + (tick_val * scale_x);
+                let formatted_tick = (conf.continuous_x_tick_formatter)(&tick_val);
+                elements.push(
+                    view! {
+                        <line x1=x_pos y1=height - margin_bottom x2=x_pos y2=height - margin_bottom + 5.0 stroke="black" />
+                        <text
+                            x=x_pos
+                            y=height - margin_bottom + 15.0
+                            text-anchor="middle"
+                            font-size="12"
+                        >
+                            {formatted_tick}
+                        </text>
+                    }
+                    .into_any(),
+                );
+            }
+        } else {
+            // Optional: draw x ticks from the longest series
+            // Here we just pick the first series that matches max_x_len to draw x-ticks
+            if let Some(s) = series_vec.iter().find(|s| s.get_x().len() == max_x_len) {
+                let x_vals: Vec<X> = s.get_x();
+                for (i, x_val) in x_vals.iter().enumerate() {
+                    let x_pos = margin_left + (i as f64) * x_slot_width;
+                    let formatted_x_tick = (conf.x_tick_formatter)(x_val);
+                    elements.push(
+                        view! {
+                            <line x1=x_pos y1=height - margin_bottom x2=x_pos y2=height - margin_bottom + 5.0 stroke="black" />
+                            <text
+                                x=x_pos
+                                y=height - margin_bottom + 15.0
+                                text-anchor="middle"
+                                font-size="12"
+                            >
+                                {formatted_x_tick}
+                            </text>
+                        }
+                        .into_any(),
+                    );
+                }
+            }
+        }
 
         for (series_idx, s) in series_vec.iter().enumerate() {
             let x_vals: Vec<X> = s.get_x();
             let y_vals: Vec<Y> = s.get_y();
             let color = palette.get_color(series_idx);
 
+            let mut points_str = String::new();
+            let mut points_elements = Vec::new();
+
             for (i, y_val) in y_vals.iter().enumerate() {
                 let val_f64 = y_val.to_f64();
-                let bar_height = val_f64 * scale_y;
-                let x_center = margin_left + (current_bar as f64 + 0.5) * bar_slot_width;
-                let bar_w = bar_slot_width * bar_relative_width;
-                let x_pos = x_center - bar_w / 2.0;
-                let y_pos = height - margin_bottom - bar_height;
+                let x_pos = if is_continuous {
+                    margin_left + (x_vals[i].to_f64() * scale_x)
+                } else {
+                    margin_left + (i as f64) * x_slot_width
+                };
+                let y_pos = height - margin_bottom - (val_f64 * scale_y);
+
+                points_str.push_str(&format!("{},{} ", x_pos, y_pos));
 
                 let formatted_x = (conf.x_formatter)(&x_vals[i]);
                 let formatted_y = (conf.y_formatter)(y_val);
-                let formatted_x_tick = (conf.x_tick_formatter)(&x_vals[i]);
 
-                elements.push(view! {
-                    <rect x=x_pos y=y_pos width=bar_w height=bar_height fill=color.to_string()>
+                points_elements.push(view! {
+                    <circle cx=x_pos cy=y_pos r=4 fill=color.to_string()>
                         <title>{format!("{}: {}", formatted_x, formatted_y)}</title>
-                    </rect>
-                    <text
-                        x=x_center
-                        y=height - margin_bottom + 15.0
-                        text-anchor="middle"
-                        font-size="12"
-                    >
-                        {formatted_x_tick}
-                    </text>
+                    </circle>
                 });
-                current_bar += 1;
             }
+
+            elements.push(
+                view! {
+                    <polyline
+                        points=points_str
+                        fill="none"
+                        stroke=color.to_string()
+                        stroke-width="2"
+                    />
+                    {points_elements}
+                }
+                .into_any(),
+            );
         }
         elements
     };
@@ -567,7 +652,7 @@ where
                     {x_label_view}
                     {y_label_view}
                     {y_axis}
-                    {bars}
+                    {lines}
                 </svg>
             </OnClient>
         </div>
@@ -580,11 +665,11 @@ mod tests {
     use leptos::prelude::GetUntracked;
 
     #[test]
-    fn test_bar_plot_builder() {
+    fn test_line_plot_builder() {
         let series1 = Series::new(vec!["A".to_string(), "B".to_string()], vec![1.0, 2.0]);
         let series2 = Series::new(vec!["C".to_string(), "D".to_string()], vec![3.0, 4.0]);
 
-        let config = BarPlotConfig::builder()
+        let config = LinePlotConfig::builder()
             .with_series(vec![series1, series2])
             .title("Test Title")
             .margin_top(10.0)
@@ -599,14 +684,5 @@ mod tests {
         assert_eq!(config.margin_bottom.get_untracked(), 20.0);
         assert_eq!(config.margin_left.get_untracked(), 30.0);
         assert_eq!(config.margin_right.get_untracked(), 40.0);
-    }
-
-    #[test]
-    fn test_bar_plot_builder_with_width() {
-        let config = BarPlotConfig::<f64, f64>::builder()
-            .bar_relative_width(0.5)
-            .build();
-
-        assert_eq!(config.bar_relative_width.get_untracked(), 0.5);
     }
 }

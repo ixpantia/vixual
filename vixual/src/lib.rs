@@ -7,6 +7,9 @@ pub mod series;
 #[cfg(feature = "bar_plot")]
 pub mod bar_plot;
 
+#[cfg(feature = "line_plot")]
+pub mod line_plot;
+
 /// Render the children only on the client. This is useful for plots
 /// or visalizations that depend on data like a specific element's size.
 #[component(transparent)]

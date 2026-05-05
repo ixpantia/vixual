@@ -7,6 +7,7 @@ use leptos_router::{
 
 use crate::pages::bar_plot::BarPlotPage;
 use crate::pages::home::HomePage;
+use crate::pages::line_plot::LinePlotPage;
 
 pub fn shell(options: LeptosOptions) -> impl IntoView {
     view! {
@@ -36,6 +37,7 @@ pub fn Layout() -> impl IntoView {
                 <nav style="display: flex; gap: 15px;">
                     <A href="/" exact=true>"Home"</A>
                     <A href="/bar-plot">"Bar Plot"</A>
+                    <A href="/line-plot">"Line Plot"</A>
                 </nav>
             </header>
 
@@ -66,6 +68,7 @@ pub fn App() -> impl IntoView {
                 <ParentRoute path=path!("") view=Layout>
                     <Route path=path!("") view=HomePage />
                     <Route path=path!("bar-plot") view=BarPlotPage />
+                    <Route path=path!("line-plot") view=LinePlotPage />
                 </ParentRoute>
             </Routes>
         </Router>

@@ -9,3 +9,4 @@ leptos-use = { workspace = true, features = ["use_element_size"] }
 
 [features]
 bar_plot = []
+line_plot = []
