@@ -70,3 +70,97 @@ impl Plotable for &'static str {
         DataType::Discrete
     }
 }
+
+#[cfg(feature = "chrono")]
+impl Plotable for chrono::NaiveDateTime {
+    fn to_f64(&self) -> f64 {
+        self.and_utc().timestamp_millis() as f64
+    }
+    fn from_f64(f: f64) -> Self {
+        chrono::DateTime::from_timestamp_millis(f as i64)
+            .unwrap_or_default()
+            .naive_utc()
+    }
+    fn to_plot_string(&self) -> String {
+        self.format("%Y-%m-%d %H:%M:%S").to_string()
+    }
+    fn data_type() -> DataType {
+        DataType::Continuous
+    }
+}
+
+#[cfg(feature = "chrono")]
+impl Plotable for chrono::DateTime<chrono::Utc> {
+    fn to_f64(&self) -> f64 {
+        self.timestamp_millis() as f64
+    }
+    fn from_f64(f: f64) -> Self {
+        chrono::DateTime::from_timestamp_millis(f as i64)
+            .unwrap_or_default()
+            .with_timezone(&chrono::Utc)
+    }
+    fn to_plot_string(&self) -> String {
+        self.format("%Y-%m-%d %H:%M:%S").to_string()
+    }
+    fn data_type() -> DataType {
+        DataType::Continuous
+    }
+}
+
+#[cfg(feature = "chrono")]
+impl Plotable for chrono::DateTime<chrono::Local> {
+    fn to_f64(&self) -> f64 {
+        self.timestamp_millis() as f64
+    }
+    fn from_f64(f: f64) -> Self {
+        chrono::DateTime::from_timestamp_millis(f as i64)
+            .unwrap_or_default()
+            .with_timezone(&chrono::Local)
+    }
+    fn to_plot_string(&self) -> String {
+        self.format("%Y-%m-%d %H:%M:%S").to_string()
+    }
+    fn data_type() -> DataType {
+        DataType::Continuous
+    }
+}
+
+#[cfg(feature = "chrono")]
+impl Plotable for chrono::DateTime<chrono::FixedOffset> {
+    fn to_f64(&self) -> f64 {
+        self.timestamp_millis() as f64
+    }
+    fn from_f64(f: f64) -> Self {
+        chrono::DateTime::from_timestamp_millis(f as i64)
+            .unwrap_or_default()
+            .with_timezone(&chrono::FixedOffset::east_opt(0).unwrap())
+    }
+    fn to_plot_string(&self) -> String {
+        self.format("%Y-%m-%d %H:%M:%S").to_string()
+    }
+    fn data_type() -> DataType {
+        DataType::Continuous
+    }
+}
+
+#[cfg(feature = "chrono")]
+impl Plotable for chrono::NaiveDate {
+    fn to_f64(&self) -> f64 {
+        self.and_hms_opt(0, 0, 0)
+            .unwrap()
+            .and_utc()
+            .timestamp_millis() as f64
+    }
+    fn from_f64(f: f64) -> Self {
+        chrono::DateTime::from_timestamp_millis(f as i64)
+            .unwrap_or_default()
+            .naive_utc()
+            .date()
+    }
+    fn to_plot_string(&self) -> String {
+        self.format("%Y-%m-%d").to_string()
+    }
+    fn data_type() -> DataType {
+        DataType::Continuous
+    }
+}

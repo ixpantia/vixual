@@ -6,7 +6,9 @@ edition = "2024"
 [dependencies]
 leptos = { workspace = true }
 leptos-use = { workspace = true, features = ["use_element_size"] }
+chrono = { version = "0.4", optional = true }
 
 [features]
 bar_plot = []
 line_plot = []
+chrono = ["dep:chrono"]

@@ -316,7 +316,7 @@ where
 
 #[component]
 pub fn LinePlot<X, Y>(
-    config: Signal<LinePlotConfig<X, Y>>,
+    #[prop(into)] config: Signal<LinePlotConfig<X, Y>>,
     #[prop(optional, into)] width: Option<Signal<String>>,
     #[prop(optional, into)] height: Option<Signal<String>>,
 ) -> impl IntoView
@@ -388,18 +388,22 @@ where
             (height - margin_top - margin_bottom) / max_y
         };
 
-        let max_x_f64 = if is_continuous {
+        let (min_x_f64, max_x_f64) = if is_continuous && !all_x_f64.is_empty() {
             all_x_f64
-                .into_iter()
-                .fold(0.0, |a, b| if a > b { a } else { b })
+                .iter()
+                .fold((f64::INFINITY, f64::NEG_INFINITY), |(min, max), &v| {
+                    (min.min(v), max.max(v))
+                })
         } else {
-            0.0
+            (0.0, 0.0)
         };
 
-        let scale_x = if max_x_f64 == 0.0 {
+        let x_range = max_x_f64 - min_x_f64;
+
+        let scale_x = if x_range == 0.0 {
             1.0
         } else {
-            (width - margin_left - margin_right) / max_x_f64
+            (width - margin_left - margin_right) / x_range
         };
 
         let x_slot_width = if max_x_len > 1 {
@@ -413,8 +417,8 @@ where
         if is_continuous {
             let num_ticks = 5;
             for i in 0..=num_ticks {
-                let tick_val = (max_x_f64 / num_ticks as f64) * (i as f64);
-                let x_pos = margin_left + (tick_val * scale_x);
+                let tick_val = min_x_f64 + (x_range / num_ticks as f64) * (i as f64);
+                let x_pos = margin_left + (tick_val - min_x_f64) * scale_x;
                 let formatted_tick = (conf.continuous_x_tick_formatter)(&tick_val);
                 elements.push(
                     view! {
@@ -468,7 +472,7 @@ where
             for (i, y_val) in y_vals.iter().enumerate() {
                 let val_f64 = y_val.to_f64();
                 let x_pos = if is_continuous {
-                    margin_left + (x_vals[i].to_f64() * scale_x)
+                    margin_left + (x_vals[i].to_f64() - min_x_f64) * scale_x
                 } else {
                     margin_left + (i as f64) * x_slot_width
                 };
@@ -684,5 +688,19 @@ mod tests {
         assert_eq!(config.margin_bottom.get_untracked(), 20.0);
         assert_eq!(config.margin_left.get_untracked(), 30.0);
         assert_eq!(config.margin_right.get_untracked(), 40.0);
+    }
+
+    #[cfg(feature = "chrono")]
+    #[test]
+    fn test_line_plot_with_chrono() {
+        use chrono::{Duration, Utc};
+        let now = Utc::now();
+        let x_vals = vec![now, now + Duration::hours(1), now + Duration::hours(2)];
+        let y_vals = vec![10.0, 20.0, 15.0];
+        let series = Series::new(x_vals, y_vals);
+
+        let config = LinePlotConfig::builder().with_series(vec![series]).build();
+
+        assert_eq!(config.series.get_untracked().len(), 1);
     }
 }
