@@ -1,5 +1,6 @@
 use leptos::prelude::*;
 use rand::Rng;
+use vixual::legend::Legend;
 use vixual::line_plot::{LinePlot, LinePlotConfig};
 use vixual::palette::ColorPalette;
 use vixual::series::Series;
@@ -17,21 +18,23 @@ fn generate_random_raw_data() -> (Vec<f64>, Vec<f64>) {
     (x_vals, values)
 }
 
-fn generate_random_data() -> Series<f64, f64> {
+fn generate_random_data(label: &str) -> Series<f64, f64> {
     let (labels, values) = generate_random_raw_data();
-    Series::new(labels, values)
+    Series::with_label(labels, values, label)
 }
 
 #[component]
 pub fn LinePlotPage() -> impl IntoView {
     let series = RwSignal::new(vec![
-        Series::new(
+        Series::with_label(
             vec![1.0, 2.0, 3.0, 4.0, 5.0],
             vec![15.0, 22.0, 18.0, 25.0, 20.0],
+            "Series A",
         ),
-        Series::new(
+        Series::with_label(
             vec![1.0, 2.0, 3.0, 4.0, 5.0],
             vec![12.0, 25.0, 14.0, 18.0, 28.0],
+            "Series B",
         ),
     ]);
     let palette = RwSignal::new(ColorPalette::default());
@@ -56,7 +59,7 @@ pub fn LinePlotPage() -> impl IntoView {
         .x_tick_formatter(|v| format!("{v:.2}"))
         .build();
 
-    let config_sig = Signal::derive(move || config.clone());
+    let config_sig = Signal::stored(config);
 
     let on_palette_change = move |ev| {
         let val = event_target_value(&ev);
@@ -78,7 +81,9 @@ pub fn LinePlotPage() -> impl IntoView {
     };
 
     let on_add_series = move |_| {
-        let new_series = generate_random_data();
+        let current_count = series.get().len();
+        let label = format!("Series {}", (b'A' + (current_count % 26) as u8) as char);
+        let new_series = generate_random_data(&label);
         series.update(|s| s.push(new_series));
     };
 
@@ -335,6 +340,10 @@ pub fn LinePlotPage() -> impl IntoView {
                     <h2>"Responsive Line Plot (100% parent)"</h2>
                     <div style="height: 400px; border: 1px dashed #ccc;">
                         <LinePlot config=config_sig />
+                    </div>
+                    <div style="margin-top: 15px;">
+                        <h3 style="margin-bottom: 10px; font-size: 14px;">"Legend"</h3>
+                        <Legend config=config_sig />
                     </div>
                 </div>
 

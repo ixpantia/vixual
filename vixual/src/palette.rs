@@ -1,7 +1,7 @@
 use leptos::prelude::*;
 
 // #RRGGBB
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Hex(pub [u8; 3]);
 
 impl std::fmt::Display for Hex {
