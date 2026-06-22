@@ -2,6 +2,7 @@ use super::OnClient;
 use leptos::prelude::*;
 use leptos_use::{UseElementSizeReturn, use_element_size};
 
+use crate::legend::{LegendItem, LegendSource};
 use crate::palette::ColorPalette;
 use crate::plotable::Plotable;
 use crate::series::Series;
@@ -116,6 +117,29 @@ where
         self
     }
 }
+
+impl<X, Y> LegendSource for BarPlotConfig<X, Y>
+where
+    X: Plotable,
+    Y: Plotable,
+{
+    fn get_legend_items(&self) -> Vec<LegendItem> {
+        let series_vec = self.series.get();
+        let palette = self.palette.get();
+
+        series_vec
+            .iter()
+            .enumerate()
+            .filter_map(|(idx, s)| {
+                s.get_label().map(|label| LegendItem {
+                    label,
+                    color: palette.get_color(idx),
+                })
+            })
+            .collect()
+    }
+}
+
 pub struct BarPlotConfigBuilder<X, Y>
 where
     X: Plotable,

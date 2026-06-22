@@ -36,7 +36,9 @@ pub fn Layout() -> impl IntoView {
             <header style="background: #333; color: white; padding: 15px 20px; display: flex; align-items: center; justify-content: space-between;">
                 <h2 style="margin: 0;">"vixual Showcase"</h2>
                 <nav style="display: flex; gap: 15px;">
-                    <A href="/" exact=true>"Home"</A>
+                    <A href="/" exact=true>
+                        "Home"
+                    </A>
                     <A href="/bar-plot">"Bar Plot"</A>
                     <A href="/line-plot">"Line Plot"</A>
                     <A href="/chrono-plot">"Chrono Plot"</A>

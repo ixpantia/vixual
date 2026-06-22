@@ -1,5 +1,6 @@
 use leptos::{either::Either, prelude::*};
 
+pub mod legend;
 pub mod palette;
 pub mod plotable;
 pub mod series;

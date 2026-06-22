@@ -2,6 +2,7 @@ use super::OnClient;
 use leptos::prelude::*;
 use leptos_use::{UseElementSizeReturn, use_element_size};
 
+use crate::legend::{LegendItem, LegendSource};
 use crate::palette::ColorPalette;
 use crate::plotable::{DataType, Plotable};
 use crate::series::Series;
@@ -119,6 +120,29 @@ where
         self
     }
 }
+
+impl<X, Y> LegendSource for LinePlotConfig<X, Y>
+where
+    X: Plotable,
+    Y: Plotable,
+{
+    fn get_legend_items(&self) -> Vec<LegendItem> {
+        let series_vec = self.series.get();
+        let palette = self.palette.get();
+
+        series_vec
+            .iter()
+            .enumerate()
+            .filter_map(|(idx, s)| {
+                s.get_label().map(|label| LegendItem {
+                    label,
+                    color: palette.get_color(idx),
+                })
+            })
+            .collect()
+    }
+}
+
 pub struct LinePlotConfigBuilder<X, Y>
 where
     X: Plotable,
@@ -422,7 +446,13 @@ where
                 let formatted_tick = (conf.continuous_x_tick_formatter)(&tick_val);
                 elements.push(
                     view! {
-                        <line x1=x_pos y1=height - margin_bottom x2=x_pos y2=height - margin_bottom + 5.0 stroke="black" />
+                        <line
+                            x1=x_pos
+                            y1=height - margin_bottom
+                            x2=x_pos
+                            y2=height - margin_bottom + 5.0
+                            stroke="black"
+                        />
                         <text
                             x=x_pos
                             y=height - margin_bottom + 15.0
@@ -445,7 +475,13 @@ where
                     let formatted_x_tick = (conf.x_tick_formatter)(x_val);
                     elements.push(
                         view! {
-                            <line x1=x_pos y1=height - margin_bottom x2=x_pos y2=height - margin_bottom + 5.0 stroke="black" />
+                            <line
+                                x1=x_pos
+                                y1=height - margin_bottom
+                                x2=x_pos
+                                y2=height - margin_bottom + 5.0
+                                stroke="black"
+                            />
                             <text
                                 x=x_pos
                                 y=height - margin_bottom + 15.0

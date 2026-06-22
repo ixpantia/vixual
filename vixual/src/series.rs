@@ -5,6 +5,7 @@ use leptos::prelude::*;
 pub struct SeriesInner<X, Y> {
     x: Vec<X>,
     y: Vec<Y>,
+    label: Option<String>,
 }
 
 #[derive(Clone, Copy)]
@@ -22,7 +23,18 @@ where
     Y: Plotable,
 {
     pub fn new(x: Vec<X>, y: Vec<Y>) -> Self {
-        let data = SeriesInner { x, y };
+        let data = SeriesInner { x, y, label: None };
+        Self {
+            data: RwSignal::new(data),
+        }
+    }
+
+    pub fn with_label(x: Vec<X>, y: Vec<Y>, label: impl Into<String>) -> Self {
+        let data = SeriesInner {
+            x,
+            y,
+            label: Some(label.into()),
+        };
         Self {
             data: RwSignal::new(data),
         }
@@ -62,5 +74,13 @@ where
     }
     pub fn get_y(&self) -> Vec<Y> {
         self.data.get().y
+    }
+    pub fn get_label(&self) -> Option<String> {
+        self.data.get().label
+    }
+    pub fn set_label(&self, label: impl Into<String>) {
+        self.data.update(|d| {
+            d.label = Some(label.into());
+        });
     }
 }
